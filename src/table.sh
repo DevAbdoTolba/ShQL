@@ -142,7 +142,7 @@ while true; do
             8)
                 echo ""
                 echo "Returning to main menu..."
-                exit 0
+                break 2
                 ;;
             *)
                 echo ""
