@@ -1,10 +1,12 @@
 # ShQL Architecture
 
 ## Overview
+
 ShQL is a Database Management System (DBMS) that is entirely written in Bash, which has a set of strict limitations:
 - **NO FUNCTIONS**: all logical operations are implemented by using control-flow structures (if/else, case, while, select)
 - **production-level architecture**: Proper distribution of tasks
 - **common tools**: `sed`, `awk`, and Bash built-ins are used
+
 
 ## Directory Structure
 
@@ -14,9 +16,9 @@ ShQL/
 │   ├── db.sh              # Database management (CRUD for databases)
 │   └── table.sh           # Table management (CRUD for tables)
 ├── data/                  # Runtime data storage (gitignored)
-│   └── /   # Each database is a directory
+│   └── <database_name>/   # Each database is a directory
 │       ├── .metadata      # Database metadata
-│       └──    # Table files (CSV-like format)
+│       └── <table_name>   # Table files (CSV-like format)
 ├── docs/                  # Documentation
 │   └── ARCHITECTURE.md    # This file
 ├── Makefile              # Setup and maintenance tasks
@@ -43,3 +45,4 @@ The entire set of scripts keeps away from function definitions. But in their pla
 - All the tables inside the database are stored as files in the corresponding database directory
 - The metadata files are simple key-value pairs
 - The table data is stored in a delimited format where the delimiter is usually a comma (CSV)
+
