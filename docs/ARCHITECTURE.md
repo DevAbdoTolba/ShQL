@@ -16,6 +16,11 @@ ShQL/
 │   ├── db.sh              # Database management (CRUD for databases)
 │   └── table.sh           # Table management (CRUD for tables)
 ├── data/                  # Runtime data storage (gitignored)
+│
+│   └── meta/
+│       ├── DBS             # all databases meta information like name number of tables and some aggeragiation
+│       └── <database_name> # important data for the database for each table, number of records, max, min and count
+│
 │   └── <database_name>/   # Each database is a directory
 │       ├── .metadata      # Database metadata
 │       └── <table_name>   # Table files (CSV-like format)
@@ -45,4 +50,3 @@ The entire set of scripts keeps away from function definitions. But in their pla
 - All the tables inside the database are stored as files in the corresponding database directory
 - The metadata files are simple key-value pairs
 - The table data is stored in a delimited format where the delimiter is usually a comma (CSV)
-

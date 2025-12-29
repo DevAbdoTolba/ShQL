@@ -3,7 +3,7 @@
 # ShQL - Database Management System in Bash
 # File: db.sh
 # Description: Main database management interface
-# 
+#
 # Constraints:
 #   - NO FUNCTIONS ALLOWED (project requirement)
 #   - Uses select/while loops with case statements
@@ -16,10 +16,20 @@ set -euo pipefail
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DATA_DIR="${SCRIPT_DIR}/../data"
+META_DIR="${DATA_DIR}/meta"
+
 
 # Initialize data directory if it doesn't exist
 if [[ ! -d "$DATA_DIR" ]]; then
     mkdir -p "$DATA_DIR"
+fi
+
+if [[ ! -d "$META_DIR" ]]; then
+    mkdir -p "$META_DIR"
+fi
+
+if [[ ! -f "$META_DIR/DBS" ]]; then
+    touch "$META_DIR/DBS"
 fi
 
 # Main menu loop
@@ -31,7 +41,7 @@ while true; do
     echo ""
     echo "Please select an option:"
     echo ""
-    
+
     # Using select for menu (alternative to PS3 prompts)
     select choice in \
         "Create Database" \
@@ -39,16 +49,31 @@ while true; do
         "Connect to Database" \
         "Drop Database" \
         "Exit"; do
-        
+
         case $REPLY in
             1)
                 echo ""
                 echo "=== Create Database ==="
-                # TODO: Implement database creation logic
-                # - Prompt for database name
-                # - Validate name (alphanumeric, no spaces)
-                # - Create directory under $DATA_DIR
-                # - Create metadata file
+                read -p "Enter database name (3,55 and only english letters): " db_name
+                if [[ -z "$db_name" ]]; then
+                    echo "Error: Can not be empty"
+                elif [[ "${#db_name}" -lt 3  ]]; then
+                    echo "Error: Can not be less than 3 letters!"
+                elif [[ "${#db_name}" -gt 55 ]]; then
+                    echo "Error: Can not be more than 55 letters!"
+                elif [[ ! "$db_name" =~ ^[a-zA-Z]{3,55}$ ]]; then
+                    echo "Error: Only english letters"
+                elif [[ "$db_name" =~ " " ]]; then
+                    echo "Error: can not include space"
+                elif [[ "$db_name" =~ ^[a-zA-Z]{3,55}$ ]]; then
+                    if grep -q "$db_name" "$META_DIR/DBS"; then
+                        echo "ERROR: Database already Exists!"
+                    else
+                        echo "Creating Database: ${db_name}"
+                        echo "${db_name}," >> "$META_DIR/DBS"
+                        mkdir $DATA_DIR/$db_name
+                    fi
+                fi
                 read -p "Press Enter to continue..."
                 break
                 ;;
