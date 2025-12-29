@@ -90,11 +90,21 @@ while true; do
             3)
                 echo ""
                 echo "=== Connect to Database ==="
-                # TODO: Implement database connection logic
-                # - Prompt for database name
-                # - Validate database exists
-                # - Export database path for table operations
-                # - Call table.sh for table management
+                read -p "Enter database name (fullname no skips): " user_in
+                db_name="$user_in"
+                incase_senstive=0
+                if [[ '$user_in' == *"-i"* ]]; then
+                    incase_senstive=1
+                    db_name="${user_in//-i/}"
+                    db_name="${db_name// /}"
+                fi
+                if cut "$META_DIR/DBS" -d',' -f1 | grep "$db_name" -x -q && test -d $DATA_DIR/$db_name; then
+
+                    echo "Connecting to $db_name"
+                    $SCRIPT_DIR/table.sh $db_name
+                else
+                    echo "Database not found! sry ;-;"
+                fi
                 read -p "Press Enter to continue..."
                 break
                 ;;
