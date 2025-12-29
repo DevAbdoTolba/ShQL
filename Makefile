@@ -24,10 +24,11 @@ help:
 	@echo "  make install   - Install/setup the project (alias for setup)"
 	@echo "  make clean     - Remove all databases and temporary files"
 	@echo "  make help      - Display this help message"
+	@echo "  make run       - start the database mangment system"
 	@echo ""
 	@echo "Usage:"
 	@echo "  1. Run 'make setup' to initialize the project"
-	@echo "  2. Run './src/db.sh' to start the database management system"
+	@echo "  2. Run 'make run' to start the database management system"
 	@echo ""
 
 ## setup: Create directories and set executable permissions
@@ -63,3 +64,6 @@ clean:
 	else \
 		echo "Clean cancelled."; \
 	fi
+
+run:
+	./src/db.sh
