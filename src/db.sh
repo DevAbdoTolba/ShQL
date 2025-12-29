@@ -70,7 +70,7 @@ while true; do
                         echo "ERROR: Database already Exists!"
                     else
                         echo "Creating Database: ${db_name}"
-                        echo "${db_name}," >> "$META_DIR/DBS"
+                        echo "${db_name},0," >> "$META_DIR/DBS"
                         mkdir $DATA_DIR/$db_name
                     fi
                 fi

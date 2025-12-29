@@ -19,7 +19,7 @@ ShQL/
 │
 │   └── meta/
 │       ├── DBS             # all databases meta information like name number of tables and some aggeragiation
-│       └── <database_name> # important data for the database for each table, number of records, max, min and count
+│       └── <table_name>    # important data for the table , number of records, max, min and count
 │
 │   └── <database_name>/   # Each database is a directory
 │       ├── .metadata      # Database metadata
