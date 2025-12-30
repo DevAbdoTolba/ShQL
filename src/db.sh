@@ -70,8 +70,8 @@ while true; do
                         echo "ERROR: Database already Exists!"
                     else
                         echo "Creating Database: ${db_name}"
-                        echo "${db_name},0," >> "$META_DIR/DBS"
                         mkdir $DATA_DIR/$db_name
+                        echo "${db_name},0," >> "$META_DIR/DBS"
                     fi
                 fi
                 read -p "Press Enter to continue..."
@@ -93,17 +93,40 @@ while true; do
                 read -p "Enter database name (fullname no skips): " user_in
                 db_name="$user_in"
                 incase_senstive=0
-                if [[ '$user_in' == *"-i"* ]]; then
+                if [[ "$user_in" == *"-i"* ]]; then
                     incase_senstive=1
                     db_name="${user_in//-i/}"
                     db_name="${db_name// /}"
                 fi
-                if cut "$META_DIR/DBS" -d',' -f1 | grep "$db_name" -x -q && test -d $DATA_DIR/$db_name; then
 
-                    echo "Connecting to $db_name"
-                    $SCRIPT_DIR/table.sh $db_name
+                if [[ "$incase_senstive" -gt 0 ]]; then
+                    match_count=$(cut "$META_DIR/DBS" -d',' -f1 | grep -i "$db_name" | wc -l)
+                    if [[ "$match_count" -gt 1 ]]; then
+                        echo "ERROR: Can not use incase senstive flag for this name, multpile databases returned with the same name";
+                    elif [[ "$match_count" -eq 0 ]]; then
+                        echo "ERROR: Database not found! sry ;-;";
+                    else
+                        real_path=$(find "$DATA_DIR" -maxdepth 1 -type d -iname "$db_name" -print -quit)
+                        if [[ -n "$real_path" ]]; then
+                            echo "Connecting to $db_name";
+                            $SCRIPT_DIR/table.sh $db_name;
+                        else
+                            echo "$db_name is courrpoted and requires user manual fix to prevent data loss!"
+                            echo "please review the file located at $(realpath $META_DIR)/DBS for more information"
+                        fi
+                    fi
+
+                elif cut "$META_DIR/DBS" -d',' -f1 | grep "$db_name" -x -q; then
+                    real_path=$(find "$DATA_DIR" -maxdepth 1 -type d -name "$db_name" -print -quit)
+                    if [[ -n "$real_path" ]]; then
+                        echo "Connecting to $db_name";
+                        $SCRIPT_DIR/table.sh $db_name;
+                    else
+                        echo "$db_name is courrpoted and requires user manual fix to prevent data loss!"
+                        echo "please review the file located at $(realpath $META_DIR)/DBS for more information"
+                    fi
                 else
-                    echo "Database not found! sry ;-;"
+                    echo "ERROR: Database not found! sry ;-;";
                 fi
                 read -p "Press Enter to continue..."
                 break
