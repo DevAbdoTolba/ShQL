@@ -77,8 +77,9 @@ while true; do
     		   read -p "Press Enter..."
     		   break
 		fi
+		LOWER_TABLE_NAME=$(echo "$TABLE_NAME" | tr 'A-Z' 'a-z')
 		for WORD in $RESERVED_WORDS; do
-    		   if [[ "$TABLE_NAME" == "$WORD" ]]; then
+    		   if [[ "$LOWER_TABLE_NAME" == "$WORD" ]]; then
                       echo "Error: Table name is reserved word."
                       read -p "Press Enter..."
                       break 2
