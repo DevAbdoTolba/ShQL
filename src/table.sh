@@ -73,7 +73,7 @@ while true; do
 		   break
 		fi		
 		if [[ ! "$TABLE_NAME" =~ ^[a-zA-Z][a-zA-Z_]*$ ]]; then
-    		   echo "Error: Invalid table name."
+    		   echo "Error: Invalid table name. It must start with a letter and contain only letters and underscores."
     		   read -p "Press Enter..."
     		   break
 		fi
