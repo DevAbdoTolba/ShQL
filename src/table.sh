@@ -131,7 +131,7 @@ while true; do
         			break 2
    			fi
 			if [[ ! "$COL_NAME" =~ ^[a-zA-Z][a-zA-Z_]*$ ]]; then
-        			echo "Error: Invalid column name."
+        			echo "Error: Invalid column name. It must start with a letter and contain only letters and underscores."
         			rm -f "$META_FILE"
         			read -p "Press Enter..."
         			break 2
