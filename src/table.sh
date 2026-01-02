@@ -157,7 +157,7 @@ while true; do
     			# Column type
     			read -p "  Type (int/string): " COL_TYPE
     			if [[ "$COL_TYPE" != "int" && "$COL_TYPE" != "string" ]]; then
-        			echo "Error: Invalid data type."
+        			echo "Error: Invalid data type. Must be 'int' or 'string'."
        				 rm -f "$META_FILE"
        				 read -p "Press Enter..."
        				 break 2
