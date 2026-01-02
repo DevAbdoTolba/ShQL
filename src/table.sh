@@ -266,12 +266,67 @@ while true; do
             7)
                 echo ""
                 echo "=== Delete from Table ==="
-                # TODO: Implement delete logic
                 # - Prompt for table name
-                # - Prompt for WHERE conditions
-                # - Use sed/awk to remove matching rows
+                read -p "Enter table name: " TABLE_NAME
+    		META_FILE="${DB_PATH}/${TABLE_NAME}.meta"
+    		DATA_FILE="${DB_PATH}/${TABLE_NAME}.data"
+    		
+    		if [[ ! -f "$META_FILE" || ! -f "$DATA_FILE" ]]; then
+        		echo "Error: Table does not exist."
+        		read -p "Press Enter..."
+       			break
+    		fi
+                
+                COL_NAMES=()
+    		while IFS=: read -r NAME TYPE PK; do
+       			COL_NAMES+=("$NAME")
+    		done < "$META_FILE"
+    		echo ""
+    		echo "Available columns:"
+    		for i in "${!COL_NAMES[@]}"; do
+        		echo "$((i+1))) ${COL_NAMES[$i]}"
+    		done
+    		read -p "Enter column number for DELETE condition: " COL_NUM
+    		if [[ ! "$COL_NUM" =~ ^[1-9][0-9]*$ ]] || (( COL_NUM < 1 || COL_NUM > ${#COL_NAMES[@]} )); then
+        		echo "Invalid column number."
+        		read -p "Press Enter..."
+        		break
+    		fi
+    		# - Prompt for WHERE conditions
+    		COL_INDEX=$COL_NUM
+    		read -p "Enter value to delete rows where ${COL_NAMES[$((COL_NUM-1))]} = " VALUE
+    		# -------- VALIDATION on values--------
+		if ! awk -F: -v idx="$COL_NUM" -v val="$VALUE" '
+    			$idx == val { found=1; exit }
+    			END { exit !found }
+		' "$DATA_FILE"; then
+    			echo "Error: Value '$VALUE' not found in table."
+    			read -p "Press Enter..."
+    			break
+		fi
                 # - Confirm deletion
+                echo ""
+    		read -p "Are you sure you want to delete matching records? (y/n): " CONFIRM
+    		if [[ "$CONFIRM" != "y" ]]; then
+        		echo "Delete operation cancelled."
+        		read -p "Press Enter..."
+        		break
+    		fi
+    		BEFORE_COUNT=$(wc -l < "$DATA_FILE")
+    		# - Use awk to remove matching rows
+    		awk -F: -v idx="$COL_INDEX" -v val="$VALUE" '
+        	$idx != val
+    		' "$DATA_FILE" > "${DATA_FILE}.tmp"
+
+    		mv "${DATA_FILE}.tmp" "$DATA_FILE"
                 # - Display number of rows deleted
+                AFTER_COUNT=$(wc -l < "$DATA_FILE")
+                DELETED=$((BEFORE_COUNT - AFTER_COUNT))
+                echo ""
+    		echo "$DELETED record(s) deleted successfully."
+                read -p "Press Enter to continue..."
+                break
+                ;;
                 read -p "Press Enter to continue..."
                 break
                 ;;
