@@ -59,22 +59,178 @@ while true; do
             1)
                 echo ""
                 echo "=== Create Table ==="
-                # TODO: Implement table creation logic
-                # - Prompt for table name
-                # - Prompt for column definitions (name:type)
-                # - Create table metadata file
-                # - Create table data file (CSV-like structure)
-                # - Validate primary key constraints
+                RESERVED_WORDS="select insert delete update from where table database"
+                # Table Name Validation
+                read -p "Enter table name: " TABLE_NAME         
+                if [[ -z "$TABLE_NAME" ]]; then
+    		   echo "Error: Table name cannot be empty."
+   		   read -p "Press Enter..."
+   		   break
+		fi		
+		if [[ ${#TABLE_NAME} -lt 3 ]]; then
+    		   echo "Error: Table name must be at least 3 characters long."
+    		   read -p "Press Enter..."
+		   break
+		fi		
+		if [[ ! "$TABLE_NAME" =~ ^[a-zA-Z][a-zA-Z_]*$ ]]; then
+    		   echo "Error: Invalid table name."
+    		   read -p "Press Enter..."
+    		   break
+		fi
+		for WORD in $RESERVED_WORDS; do
+    		   if [[ "$TABLE_NAME" == "$WORD" ]]; then
+                      echo "Error: Table name is reserved word."
+                      read -p "Press Enter..."
+                      break 2
+   		   fi
+		done
+		
+		META_FILE="${DB_PATH}/${TABLE_NAME}.meta"
+		DATA_FILE="${DB_PATH}/${TABLE_NAME}.data"
+		
+		if [[ -f "$META_FILE" ]]; then
+    		   echo "Error: Table already exists."
+    		   read -p "Press Enter..."
+   		   break
+		fi
+		# Number of Columns
+		read -p "Enter number of columns: " COL_COUNT
+		if [[ ! "$COL_COUNT" =~ ^[1-9][0-9]*$ ]]; then
+    		  echo "Error: Number of columns must be a positive integer."
+    		  read -p "Press Enter..."
+   		  break
+		fi
+		if [[ "$COL_COUNT" -gt 9 ]]; then
+    		   echo "Error: Maximum number of columns allowed is 9."
+    		   read -p "Press Enter..."
+   		   break
+		fi
+		if [[ "$COL_COUNT" -lt 2 ]]; then
+    		   echo "Error: Table must contain at least 2 columns."
+		   read -p "Press Enter..."
+    		   break
+		fi
+		
+		> "$META_FILE"
+		PK_COUNT=0
+		COL_NAMES=""
+		for (( i=1; i<=COL_COUNT; i++ )); do
+    			echo "Column $i"
+    			read -p "  Name: " COL_NAME
+    			# Column name validations
+			if [[ -z "$COL_NAME" ]]; then
+				echo "Error: Column name cannot be empty."
+				rm -f "$META_FILE"
+				read -p "Press Enter..."
+				break 2
+			fi
+			if [[ ${#COL_NAME} -lt 2 ]]; then
+       				 echo "Error: Column name must be at least 2 characters."
+       				 rm -f "$META_FILE"
+        			read -p "Press Enter..."
+        			break 2
+   			fi
+			if [[ ! "$COL_NAME" =~ ^[a-zA-Z][a-zA-Z_]*$ ]]; then
+        			echo "Error: Invalid column name."
+        			rm -f "$META_FILE"
+        			read -p "Press Enter..."
+        			break 2
+    			fi
+    			for WORD in $RESERVED_WORDS; do
+        			if [[ "$COL_NAME" == "$WORD" ]]; then
+            			   echo "Error: Column name is reserved."
+            			   rm -f "$META_FILE"
+            			   read -p "Press Enter..."
+            			   break 3
+        			fi
+    			done
+    			LOWER_NAME=$(echo "$COL_NAME" | tr 'A-Z' 'a-z')
+    			for USED in $COL_NAMES; do
+       			   if [[ "$LOWER_NAME" == "$USED" ]]; then
+           		   	echo "Error: Duplicate column name."
+           		   	rm -f "$META_FILE"
+            	           	read -p "Press Enter..."
+            		   	break 3
+        		   fi
+    			done
+   			COL_NAMES="$COL_NAMES $LOWER_NAME"
+    			# Column type
+    			read -p "  Type (int/string): " COL_TYPE
+    			if [[ "$COL_TYPE" != "int" && "$COL_TYPE" != "string" ]]; then
+        			echo "Error: Invalid data type."
+       				 rm -f "$META_FILE"
+       				 read -p "Press Enter..."
+       				 break 2
+   			 fi
+   			  # Primary Key
+   			 read -p "  Primary Key? (y/n): " IS_PK
+   			 if [[ "$IS_PK" == "y" ]]; then
+       				 if [[ $PK_COUNT -eq 1 ]]; then
+          			    echo "Error: Only one primary key allowed."
+          			    rm -f "$META_FILE"
+          			    read -p "Press Enter..."
+         			    break 2
+       				 fi
+
+        			 if [[ "$COL_TYPE" != "int" ]]; then
+           		 	    echo "Error: Primary key must be integer."
+           			     rm -f "$META_FILE"
+           			     read -p "Press Enter..."
+           		 	     break 2
+        			 fi
+
+        			echo "${COL_NAME}:${COL_TYPE}:PK" >> "$META_FILE"
+        			PK_COUNT=1
+    			else
+      				echo "${COL_NAME}:${COL_TYPE}" >> "$META_FILE"
+  			fi
+  		done
+  		# Final PK Validation
+  		if [[ $PK_COUNT -ne 1 ]]; then
+    			echo "Error: Table must have exactly one primary key."
+    			rm -f "$META_FILE"
+    			read -p "Press Enter..."
+    			break
+		fi
+		touch "$DATA_FILE"
+		echo "Table '$TABLE_NAME' created successfully."
+                
                 read -p "Press Enter to continue..."
                 break
                 ;;
             2)
                 echo ""
                 echo "=== List Tables ==="
-                # TODO: Implement table listing logic
                 # - List all tables in current database
+                TABLES=($(ls "$DB_PATH" | grep "\.meta$" | sed 's/\.meta$//'))
+                if [[ ${#TABLES[@]} -eq 0 ]]; then
+    			echo "No tables found in database '$DB_NAME'."
+    			read -p "Press Enter to continue..."
+    			break
+		fi
                 # - Display table metadata (columns, row count)
-                # - Format output as table
+                for TABLE in "${TABLES[@]}"; do
+                	META_FILE="${DB_PATH}/${TABLE}.meta"
+    			DATA_FILE="${DB_PATH}/${TABLE}.data"
+    			echo "-----------------------------------------"
+    			echo "Table: $TABLE"
+    			echo -n "Columns: "
+    			while IFS=: read -r COL_NAME COL_TYPE COL_PK; do
+        			if [[ "$COL_PK" == "PK" ]]; then
+            				echo -n "$COL_NAME($COL_TYPE)[PK]  "
+        			else
+            				echo -n "$COL_NAME($COL_TYPE)  "
+        			fi
+    			done < "$META_FILE"
+    			echo ""
+    			if [[ -f "$DATA_FILE" ]]; then
+        			ROW_COUNT=$(wc -l < "$DATA_FILE")
+    			else
+        			ROW_COUNT=0
+    			fi
+    			echo "Number of records: $ROW_COUNT"
+    		done
+    		echo "-----------------------------------------"
                 read -p "Press Enter to continue..."
                 break
                 ;;
@@ -92,13 +248,84 @@ while true; do
             4)
                 echo ""
                 echo "=== Insert into Table ==="
-                # TODO: Implement insert logic
                 # - Prompt for table name
+                 read -p "Enter table name: " TABLE_NAME
+    		 META_FILE="${DB_PATH}/${TABLE_NAME}.meta"
+    		 DATA_FILE="${DB_PATH}/${TABLE_NAME}.data"
+    		 
+    		 if [[ ! -f "$META_FILE" || ! -f "$DATA_FILE" ]]; then
+        		echo "Error: Table does not exist."
+        		read -p "Press Enter..."
+        		break
+   		 fi
                 # - Display column names
+                COL_NAMES=()
+		COL_TYPES=()
+		COL_PKS=()
+		while IFS=: read -r NAME TYPE PK; do
+    			COL_NAMES+=("$NAME")
+    			COL_TYPES+=("$TYPE")
+    			COL_PKS+=("$PK")
+		done < "$META_FILE"
+                
+                echo ""
+    		echo "Table Columns:"
+    		for i in "${!COL_NAMES[@]}"; do
+    			if [[ "${COL_PKS[$i]}" == "PK" ]]; then
+        			echo "$((i+1))) ${COL_NAMES[$i]} (${COL_TYPES[$i]}) [PK]"
+    			else
+        			echo "$((i+1))) ${COL_NAMES[$i]} (${COL_TYPES[$i]})"
+   			 fi
+		done
+   		echo ""
                 # - Prompt for values for each column
+                VALUES=""
+    		PK_VALUE=""
+    		PK_INDEX=0
+    		for i in "${!COL_NAMES[@]}"; do
+    			while true; do
+        			read -p "Enter value for ${COL_NAMES[$i]} (${COL_TYPES[$i]}): " VALUE	 
                 # - Validate data types
-                # - Append to table data file using awk/sed
+                		if [[ -z "$VALUE" ]]; then
+            				echo "Error: Value cannot be empty."
+            				continue
+        			fi
+        	
+                		if [[ "${COL_PKS[$i]}" == "PK" ]]; then
+            				if [[ ! "$VALUE" =~ ^[1-9][0-9]*$ ]]; then
+                				echo "Error: Primary key must be a positive integer."
+                				continue
+           				fi
                 # - Handle primary key uniqueness
+           				if awk -F: -v pk="$VALUE" -v idx=$((i+1)) '$idx == pk {exit 1}' "$DATA_FILE"; then
+                			:
+            				else
+                				echo "Error: Duplicate primary key value."
+                				continue
+            				fi
+            				PK_VALUE="$VALUE"
+           				PK_INDEX=$((i+1))
+        		
+        			elif [[ "${COL_TYPES[$i]}" == "int" ]]; then
+            				if [[ ! "$VALUE" =~ ^-?[0-9]+$ ]]; then
+                			echo "Error: ${COL_NAMES[$i]} must be integer."
+                			continue
+            				fi
+            			elif [[ "${COL_TYPES[$i]}" == "string" ]]; then
+            				if [[ "$VALUE" == *:* ]]; then
+                				echo "Error: ':' is not allowed in string."
+                				continue
+            				fi
+       				fi
+       		
+       				break
+    			done
+    			VALUES+="$VALUE:"
+		done
+    		VALUES="${VALUES%:}"
+                # - Append to table data file using awk
+    		awk -v record="$VALUES" 'END { print record }' "$DATA_FILE" >> "$DATA_FILE"
+                echo "Record inserted successfully."
                 read -p "Press Enter to continue..."
                 break
                 ;;
