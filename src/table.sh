@@ -192,7 +192,12 @@ while true; do
     			read -p "Press Enter..."
     			break
 		fi
-		touch "$DATA_FILE"
+		if ! touch "$DATA_FILE"; then
+    			echo "Error: Failed to create data file for table '$TABLE_NAME'."
+    			rm -f "$META_FILE"
+    			read -p "Press Enter..."
+    			break
+		fi
 		echo "Table '$TABLE_NAME' created successfully."
                 
                 read -p "Press Enter to continue..."
