@@ -8,6 +8,18 @@
 #   - NO FUNCTIONS ALLOWED (project requirement)
 #   - Uses select/while loops with case statements
 #   - Follows Korn/Bash shell standards
+#
+# Security Note:
+#   Table name validation is required for all operations that accept table names
+#   to prevent path traversal attacks. Due to the no-functions constraint,
+#   validation logic is duplicated across operations. When implementing new
+#   operations (Drop, Select, Update, Delete), ensure table name validation
+#   includes:
+#   1. Empty check
+#   2. Minimum length (3 chars)
+#   3. Format validation (^[a-zA-Z][a-zA-Z_]*$)
+#   4. Reserved word check (case-insensitive)
+#   5. Path traversal protection (realpath verification)
 ################################################################################
 
 # Set strict error handling
@@ -77,8 +89,10 @@ while true; do
     		   read -p "Press Enter..."
     		   break
 		fi
+		LOWER_TABLE_NAME=$(echo "$TABLE_NAME" | tr 'A-Z' 'a-z')
 		for WORD in $RESERVED_WORDS; do
-    		   if [[ "$TABLE_NAME" == "$WORD" ]]; then
+		   LOWER_WORD=$(echo "$WORD" | tr 'A-Z' 'a-z')
+    		   if [[ "$LOWER_TABLE_NAME" == "$LOWER_WORD" ]]; then
                       echo "Error: Table name is reserved word."
                       read -p "Press Enter..."
                       break 2
@@ -87,6 +101,17 @@ while true; do
 		
 		META_FILE="${DB_PATH}/${TABLE_NAME}.meta"
 		DATA_FILE="${DB_PATH}/${TABLE_NAME}.data"
+		
+		# Ensure paths remain within DB_PATH
+		REAL_META_PATH=$(realpath -m "$META_FILE")
+		REAL_DATA_PATH=$(realpath -m "$DATA_FILE")
+		REAL_DB_PATH=$(realpath "$DB_PATH")
+		
+		if [[ "$REAL_META_PATH" != "$REAL_DB_PATH"/* ]] || [[ "$REAL_DATA_PATH" != "$REAL_DB_PATH"/* ]]; then
+		    echo "Error: Invalid table name."
+		    read -p "Press Enter..."
+		    break
+		fi
 		
 		if [[ -f "$META_FILE" ]]; then
     		   echo "Error: Table already exists."
@@ -223,10 +248,49 @@ while true; do
             4)
                 echo ""
                 echo "=== Insert into Table ==="
+                RESERVED_WORDS="select insert delete update from where table database"
                 # - Prompt for table name
                  read -p "Enter table name: " TABLE_NAME
+                 
+                 # Table Name Validation
+                 if [[ -z "$TABLE_NAME" ]]; then
+                     echo "Error: Table name cannot be empty."
+                     read -p "Press Enter..."
+                     break
+                 fi
+                 if [[ ${#TABLE_NAME} -lt 3 ]]; then
+                     echo "Error: Table name must be at least 3 characters long."
+                     read -p "Press Enter..."
+                     break
+                 fi
+                 if [[ ! "$TABLE_NAME" =~ ^[a-zA-Z][a-zA-Z_]*$ ]]; then
+                     echo "Error: Invalid table name."
+                     read -p "Press Enter..."
+                     break
+                 fi
+                 LOWER_TABLE_NAME=$(echo "$TABLE_NAME" | tr 'A-Z' 'a-z')
+                 for WORD in $RESERVED_WORDS; do
+                     LOWER_WORD=$(echo "$WORD" | tr 'A-Z' 'a-z')
+                     if [[ "$LOWER_TABLE_NAME" == "$LOWER_WORD" ]]; then
+                         echo "Error: Table name is reserved word."
+                         read -p "Press Enter..."
+                         break 2
+                     fi
+                 done
+                 
     		 META_FILE="${DB_PATH}/${TABLE_NAME}.meta"
     		 DATA_FILE="${DB_PATH}/${TABLE_NAME}.data"
+    		 
+    		 # Ensure paths remain within DB_PATH
+    		 REAL_META_PATH=$(realpath -m "$META_FILE")
+    		 REAL_DATA_PATH=$(realpath -m "$DATA_FILE")
+    		 REAL_DB_PATH=$(realpath "$DB_PATH")
+    		 
+    		 if [[ "$REAL_META_PATH" != "$REAL_DB_PATH"/* ]] || [[ "$REAL_DATA_PATH" != "$REAL_DB_PATH"/* ]]; then
+    		     echo "Error: Invalid table name."
+    		     read -p "Press Enter..."
+    		     break
+    		 fi
     		 
     		 if [[ ! -f "$META_FILE" || ! -f "$DATA_FILE" ]]; then
         		echo "Error: Table does not exist."
