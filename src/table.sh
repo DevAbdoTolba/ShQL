@@ -264,14 +264,55 @@ while true; do
                 break
                 ;;
             7)
-                echo ""
-                echo "=== Delete from Table ==="
-                # TODO: Implement delete logic
-                # - Prompt for table name
-                # - Prompt for WHERE conditions
-                # - Use sed/awk to remove matching rows
-                # - Confirm deletion
-                # - Display number of rows deleted
+            	echo ""
+    		echo "=== Delete from Table ==="
+    		# Delete a row by primary key from the specified table
+    		read -p "Enter table name: " TABLE_NAME
+    		
+    		# Table name validation
+    		if [[ -z "$TABLE_NAME" ]]; then
+    		    echo "Error: Table name cannot be empty."
+    		    read -p "Press Enter..."
+    		    break
+    		fi
+    		
+    		if [[ ${#TABLE_NAME} -lt 3 ]]; then
+    		    echo "Error: Table name must be at least 3 characters long."
+    		    read -p "Press Enter..."
+    		    break
+    		fi
+    		
+    		if [[ ! "$TABLE_NAME" =~ ^[a-zA-Z][a-zA-Z_]*$ ]]; then
+    		    echo "Error: Invalid table name. It must start with a letter and contain only letters and underscores."
+    		    read -p "Press Enter..."
+    		    break
+    		fi
+    		
+    		META_FILE="${DB_PATH}/${TABLE_NAME}.meta"
+    		DATA_FILE="${DB_PATH}/${TABLE_NAME}.data"
+    		
+    		if [[ ! -f "$META_FILE" || ! -f "$DATA_FILE" ]]; then
+        		echo "Error: Table '$TABLE_NAME' does not exist."
+        		read -p "Press Enter to continue..."
+        		break
+    		fi
+    		
+    		read -p "Enter Primary Key value to delete: " PK_VALUE
+                
+                if [[ -z "$PK_VALUE" ]]; then
+                    echo "Error: Primary Key value cannot be empty."
+                    read -p "Press Enter to continue..."
+                    break
+                fi
+
+                if ! grep -q "^${PK_VALUE}:" "$DATA_FILE"; then
+    			echo "Error: Primary Key not found."
+        		read -p "Press Enter to continue..."
+        		break
+		fi
+
+		sed -i "/^${PK_VALUE}:/d" "$DATA_FILE" 
+		echo "Row deleted successfully."
                 read -p "Press Enter to continue..."
                 break
                 ;;
