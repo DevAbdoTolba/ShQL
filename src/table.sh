@@ -266,7 +266,7 @@ while true; do
             7)
             	echo ""
     		echo "=== Delete from Table ==="
-    		# - Prompt for table name
+    		# Delete a row by primary key from the specified table
     		read -p "Enter table name: " TABLE_NAME
     		META_FILE="${DB_PATH}/${TABLE_NAME}.meta"
     		DATA_FILE="${DB_PATH}/${TABLE_NAME}.data"
