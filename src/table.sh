@@ -272,19 +272,19 @@ while true; do
     		# Table name validation
     		if [[ -z "$TABLE_NAME" ]]; then
     		    echo "Error: Table name cannot be empty."
-    		    read -p "Press Enter to continue..."
+    		    read -p "Press Enter..."
     		    break
     		fi
     		
     		if [[ ${#TABLE_NAME} -lt 3 ]]; then
     		    echo "Error: Table name must be at least 3 characters long."
-    		    read -p "Press Enter to continue..."
+    		    read -p "Press Enter..."
     		    break
     		fi
     		
     		if [[ ! "$TABLE_NAME" =~ ^[a-zA-Z][a-zA-Z_]*$ ]]; then
     		    echo "Error: Invalid table name. It must start with a letter and contain only letters and underscores."
-    		    read -p "Press Enter to continue..."
+    		    read -p "Press Enter..."
     		    break
     		fi
     		
