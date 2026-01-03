@@ -8,6 +8,18 @@
 #   - NO FUNCTIONS ALLOWED (project requirement)
 #   - Uses select/while loops with case statements
 #   - Follows Korn/Bash shell standards
+#
+# Security Note:
+#   Table name validation is required for all operations that accept table names
+#   to prevent path traversal attacks. Due to the no-functions constraint,
+#   validation logic is duplicated across operations. When implementing new
+#   operations (Drop, Select, Update, Delete), ensure table name validation
+#   includes:
+#   1. Empty check
+#   2. Minimum length (3 chars)
+#   3. Format validation (^[a-zA-Z][a-zA-Z_]*$)
+#   4. Reserved word check (case-insensitive)
+#   5. Path traversal protection (realpath verification)
 ################################################################################
 
 # Set strict error handling
