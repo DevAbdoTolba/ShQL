@@ -8,6 +8,18 @@
 #   - NO FUNCTIONS ALLOWED (project requirement)
 #   - Uses select/while loops with case statements
 #   - Follows Korn/Bash shell standards
+#
+# Security Note:
+#   Table name validation is required for all operations that accept table names
+#   to prevent path traversal attacks. Due to the no-functions constraint,
+#   validation logic is duplicated across operations. When implementing new
+#   operations (Drop, Select, Update, Delete), ensure table name validation
+#   includes:
+#   1. Empty check
+#   2. Minimum length (3 chars)
+#   3. Format validation (^[a-zA-Z][a-zA-Z_]*$)
+#   4. Reserved word check (case-insensitive)
+#   5. Path traversal protection (realpath verification)
 ################################################################################
 
 # Set strict error handling
@@ -79,7 +91,8 @@ while true; do
 		fi
 		LOWER_TABLE_NAME=$(echo "$TABLE_NAME" | tr 'A-Z' 'a-z')
 		for WORD in $RESERVED_WORDS; do
-    		   if [[ "$LOWER_TABLE_NAME" == "$WORD" ]]; then
+		   LOWER_WORD=$(echo "$WORD" | tr 'A-Z' 'a-z')
+    		   if [[ "$LOWER_TABLE_NAME" == "$LOWER_WORD" ]]; then
                       echo "Error: Table name is reserved word."
                       read -p "Press Enter..."
                       break 2
@@ -88,6 +101,17 @@ while true; do
 		
 		META_FILE="${DB_PATH}/${TABLE_NAME}.meta"
 		DATA_FILE="${DB_PATH}/${TABLE_NAME}.data"
+		
+		# Ensure paths remain within DB_PATH
+		REAL_META_PATH=$(realpath -m "$META_FILE")
+		REAL_DATA_PATH=$(realpath -m "$DATA_FILE")
+		REAL_DB_PATH=$(realpath "$DB_PATH")
+		
+		if [[ "$REAL_META_PATH" != "$REAL_DB_PATH"/* ]] || [[ "$REAL_DATA_PATH" != "$REAL_DB_PATH"/* ]]; then
+		    echo "Error: Invalid table name."
+		    read -p "Press Enter..."
+		    break
+		fi
 		
 		if [[ -f "$META_FILE" ]]; then
     		   echo "Error: Table already exists."
@@ -139,7 +163,8 @@ while true; do
     			fi
     			LOWER_NAME=$(echo "$COL_NAME" | tr 'A-Z' 'a-z')
     			for WORD in $RESERVED_WORDS; do
-        			if [[ "$LOWER_NAME" == "$WORD" ]]; then
+        			LOWER_WORD=$(echo "$WORD" | tr 'A-Z' 'a-z')
+        			if [[ "$LOWER_NAME" == "$LOWER_WORD" ]]; then
             			   echo "Error: Column name is reserved."
             			   rm -f "$META_FILE"
             			   read -p "Press Enter..."
@@ -228,13 +253,126 @@ while true; do
             4)
                 echo ""
                 echo "=== Insert into Table ==="
-                # TODO: Implement insert logic
+                RESERVED_WORDS="select insert delete update from where table database"
                 # - Prompt for table name
+                 read -p "Enter table name: " TABLE_NAME
+                 
+                 # Table Name Validation
+                 if [[ -z "$TABLE_NAME" ]]; then
+                     echo "Error: Table name cannot be empty."
+                     read -p "Press Enter..."
+                     break
+                 fi
+                 if [[ ${#TABLE_NAME} -lt 3 ]]; then
+                     echo "Error: Table name must be at least 3 characters long."
+                     read -p "Press Enter..."
+                     break
+                 fi
+                 if [[ ! "$TABLE_NAME" =~ ^[a-zA-Z][a-zA-Z_]*$ ]]; then
+                     echo "Error: Invalid table name."
+                     read -p "Press Enter..."
+                     break
+                 fi
+                 LOWER_TABLE_NAME=$(echo "$TABLE_NAME" | tr 'A-Z' 'a-z')
+                 for WORD in $RESERVED_WORDS; do
+                     LOWER_WORD=$(echo "$WORD" | tr 'A-Z' 'a-z')
+                     if [[ "$LOWER_TABLE_NAME" == "$LOWER_WORD" ]]; then
+                         echo "Error: Table name is reserved word."
+                         read -p "Press Enter..."
+                         break 2
+                     fi
+                 done
+                 
+    		 META_FILE="${DB_PATH}/${TABLE_NAME}.meta"
+    		 DATA_FILE="${DB_PATH}/${TABLE_NAME}.data"
+    		 
+    		 # Ensure paths remain within DB_PATH
+    		 REAL_META_PATH=$(realpath -m "$META_FILE")
+    		 REAL_DATA_PATH=$(realpath -m "$DATA_FILE")
+    		 REAL_DB_PATH=$(realpath "$DB_PATH")
+    		 
+    		 if [[ "$REAL_META_PATH" != "$REAL_DB_PATH"/* ]] || [[ "$REAL_DATA_PATH" != "$REAL_DB_PATH"/* ]]; then
+    		     echo "Error: Invalid table name."
+    		     read -p "Press Enter..."
+    		     break
+    		 fi
+    		 
+    		 if [[ ! -f "$META_FILE" || ! -f "$DATA_FILE" ]]; then
+        		echo "Error: Table does not exist."
+        		read -p "Press Enter..."
+        		break
+   		 fi
                 # - Display column names
+                COL_NAMES=()
+		COL_TYPES=()
+		COL_PKS=()
+		while IFS=: read -r NAME TYPE PK; do
+    			COL_NAMES+=("$NAME")
+    			COL_TYPES+=("$TYPE")
+    			COL_PKS+=("$PK")
+		done < "$META_FILE"
+                
+                echo ""
+    		echo "Table Columns:"
+    		for i in "${!COL_NAMES[@]}"; do
+    			if [[ "${COL_PKS[$i]}" == "PK" ]]; then
+        			echo "$((i+1))) ${COL_NAMES[$i]} (${COL_TYPES[$i]}) [PK]"
+    			else
+        			echo "$((i+1))) ${COL_NAMES[$i]} (${COL_TYPES[$i]})"
+   			 fi
+		done
+   		echo ""
                 # - Prompt for values for each column
+                VALUES=""
+    		PK_VALUE=""
+    		PK_INDEX=0
+    		for i in "${!COL_NAMES[@]}"; do
+    			while true; do
+        			read -p "Enter value for ${COL_NAMES[$i]} (${COL_TYPES[$i]}): " VALUE	 
                 # - Validate data types
-                # - Append to table data file using awk/sed
+                		if [[ -z "$VALUE" ]]; then
+            				echo "Error: Value cannot be empty."
+            				continue
+        			fi
+        	
+                		if [[ "${COL_PKS[$i]}" == "PK" ]]; then
+            				if [[ ! "$VALUE" =~ ^[1-9][0-9]*$ ]]; then
+                				echo "Error: Primary key must be a positive integer."
+                				continue
+           				fi
                 # - Handle primary key uniqueness
+           				if awk -F: -v pk="$VALUE" -v idx=$((i+1)) '$idx == pk {exit 1}' "$DATA_FILE"; then
+                			:
+            				else
+                				echo "Error: Duplicate primary key value."
+                				continue
+            				fi
+            				PK_VALUE="$VALUE"
+           				PK_INDEX=$((i+1))
+        		
+        			elif [[ "${COL_TYPES[$i]}" == "int" ]]; then
+            				if [[ ! "$VALUE" =~ ^-?[0-9]+$ ]]; then
+                			echo "Error: ${COL_NAMES[$i]} must be integer."
+                			continue
+            				fi
+            			elif [[ "${COL_TYPES[$i]}" == "string" ]]; then
+            				if [[ "$VALUE" == *:* ]]; then
+                				echo "Error: ':' is not allowed in string."
+                				continue
+            				fi
+       				fi
+       		
+       				break
+    			done
+    			if [[ -z "$VALUES" ]]; then
+    				VALUES="$VALUE"
+    			else
+    				VALUES+=":$VALUE"
+    			fi
+		done
+                # - Append to table data file using awk
+    		awk -v record="$VALUES" 'END { print record }' "$DATA_FILE" >> "$DATA_FILE"
+                echo "Record inserted successfully."
                 read -p "Press Enter to continue..."
                 break
                 ;;
