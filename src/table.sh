@@ -279,13 +279,19 @@ while true; do
     		
     		read -p "Enter Primary Key value to delete: " PK_VALUE
                 
-                if ! grep -q "^$PK_VALUE:" "$DATA_FILE"; then
+                if [[ -z "$PK_VALUE" ]]; then
+                    echo "Error: Primary Key value cannot be empty."
+                    read -p "Press Enter to continue..."
+                    break
+                fi
+
+                if ! grep -q "^${PK_VALUE}:" "$DATA_FILE"; then
     			echo "Error: Primary Key not found."
         		read -p "Press Enter to continue..."
         		break
 		fi
 
-		sed -i "/^$PK_VALUE:/d" "$DATA_FILE" 
+		sed -i "/^${PK_VALUE}:/d" "$DATA_FILE" 
 		echo "Row deleted successfully."
                 read -p "Press Enter to continue..."
                 break
