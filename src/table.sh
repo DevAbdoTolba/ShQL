@@ -268,6 +268,26 @@ while true; do
     		echo "=== Delete from Table ==="
     		# Delete a row by primary key from the specified table
     		read -p "Enter table name: " TABLE_NAME
+    		
+    		# Table name validation
+    		if [[ -z "$TABLE_NAME" ]]; then
+    		    echo "Error: Table name cannot be empty."
+    		    read -p "Press Enter..."
+    		    break
+    		fi
+    		
+    		if [[ ${#TABLE_NAME} -lt 3 ]]; then
+    		    echo "Error: Table name must be at least 3 characters long."
+    		    read -p "Press Enter..."
+    		    break
+    		fi
+    		
+    		if [[ ! "$TABLE_NAME" =~ ^[a-zA-Z][a-zA-Z_]*$ ]]; then
+    		    echo "Error: Invalid table name. It must start with a letter and contain only letters and underscores."
+    		    read -p "Press Enter..."
+    		    break
+    		fi
+    		
     		META_FILE="${DB_PATH}/${TABLE_NAME}.meta"
     		DATA_FILE="${DB_PATH}/${TABLE_NAME}.data"
     		
