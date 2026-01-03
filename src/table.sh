@@ -295,9 +295,12 @@ while true; do
        		
        				break
     			done
-    			VALUES+="$VALUE:"
+    			if [[ -z "$VALUES" ]]; then
+    				VALUES="$VALUE"
+    			else
+    				VALUES+=":$VALUE"
+    			fi
 		done
-    		VALUES="${VALUES%:}"
                 # - Append to table data file using awk
     		awk -v record="$VALUES" 'END { print record }' "$DATA_FILE" >> "$DATA_FILE"
                 echo "Record inserted successfully."
