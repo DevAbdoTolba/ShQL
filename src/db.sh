@@ -134,11 +134,59 @@ while true; do
             4)
                 echo ""
                 echo "=== Drop Database ==="
-                # TODO: Implement database deletion logic
-                # - Prompt for database name
-                # - Confirm deletion (Y/N)
-                # - Remove database directory and all contents
-                # - Display success message
+                read -p "Enter database name (use -a to remove metadata row): " user_in
+                remove_all=0
+    		db_name="$user_in"
+    		if [[ "$user_in" == *"-a"* ]]; then
+        		remove_all=1
+        		db_name="${user_in//-a/}"
+        		db_name="${db_name// /}"
+    		fi
+    		# Validation
+    		if [[ -z "$db_name" ]]; then
+        		echo "Error: Database name can not be empty!"
+        		read -p "Press Enter to continue..."
+        		break
+    		elif [[ ! "$db_name" =~ ^[a-zA-Z]{3,55}$ ]]; then
+        		echo "Error: Name must be 3-55 English letters only (no numbers, spaces, or symbols)"
+        		read -p "Press Enter to continue..."
+        		break
+    		fi
+    		if ! cut -d',' -f1 "$META_DIR/DBS" | grep -xq "$db_name"; then
+        		echo "Database '$db_name' not found."
+        		read -p "Press Enter to continue..."
+        		break
+    		fi
+    		
+    		read -p "Are you sure you want to delete '$db_name'? (Y/N): " confirm
+    		
+    		case "$confirm" in
+        	   Y|y)
+            		if [[ -d "$DATA_DIR/$db_name" ]]; then
+                		rm -r "$DATA_DIR/$db_name"
+                		echo "Database directory deleted."
+            		else
+                		echo "Warning: Database folder missing, metadata only."
+            		fi
+
+            		if [[ "$remove_all" -eq 1 ]]; then
+                		grep -v "^${db_name}," "$META_DIR/DBS" > "$META_DIR/DBS.tmp"
+                		mv "$META_DIR/DBS.tmp" "$META_DIR/DBS"
+                		echo "Metadata row removed completely."
+            		else
+                		awk -F',' -v db="$db_name" '
+                		BEGIN{OFS=","}
+                		$1==db {$1="!"db}
+                		{print}
+                		' "$META_DIR/DBS" > "$META_DIR/DBS.tmp"
+                		mv "$META_DIR/DBS.tmp" "$META_DIR/DBS"
+                		echo "Database marked as deleted in metadata."
+            		fi
+            		;;
+        	   *)
+            		echo "Deletion canceled."
+            		;;
+    		esac
                 read -p "Press Enter to continue..."
                 break
                 ;;
