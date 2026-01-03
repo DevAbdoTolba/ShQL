@@ -136,15 +136,16 @@ while true; do
         			read -p "Press Enter..."
         			break 2
     			fi
+    			LOWER_NAME=$(echo "$COL_NAME" | tr 'A-Z' 'a-z')
     			for WORD in $RESERVED_WORDS; do
-        			if [[ "$COL_NAME" == "$WORD" ]]; then
+        			LOWER_WORD=$(echo "$WORD" | tr 'A-Z' 'a-z')
+        			if [[ "$LOWER_NAME" == "$LOWER_WORD" ]]; then
             			   echo "Error: Column name is reserved."
             			   rm -f "$META_FILE"
             			   read -p "Press Enter..."
             			   break 3
         			fi
     			done
-    			LOWER_NAME=$(echo "$COL_NAME" | tr 'A-Z' 'a-z')
     			for USED in $COL_NAMES; do
        			   if [[ "$LOWER_NAME" == "$USED" ]]; then
            		   	echo "Error: Duplicate column name."
