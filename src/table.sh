@@ -217,11 +217,31 @@ while true; do
             3)
                 echo ""
                 echo "=== Drop Table ==="
-                # TODO: Implement table deletion logic
                 # - Prompt for table name
+                read -p "Enter table name to drop: " TABLE_NAME
+                
+    		META_FILE="${DB_PATH}/${TABLE_NAME}.meta"
+    		DATA_FILE="${DB_PATH}/${TABLE_NAME}.data"
+    		
+    		if [[ ! -f "$META_FILE" || ! -f "$DATA_FILE" ]]; then
+        		echo "Error: Table '$TABLE_NAME' does not exist."
+        		read -p "Press Enter to continue..."
+        		break
+    		fi
                 # - Confirm deletion (Y/N)
+                echo ""
+    		echo "WARNING: This will permanently delete the table '$TABLE_NAME'."
+    		read -p "Are you sure? (y/n): " CONFIRM
+    		
+    		if [[ "$CONFIRM" != "y" ]]; then
+        		echo "Drop table operation cancelled."
+        		read -p "Press Enter to continue..."
+        		break
+    		fi
                 # - Remove table metadata and data files
+                rm -f "$META_FILE" "$DATA_FILE"
                 # - Display success message
+                echo "Table '$TABLE_NAME' dropped successfully."
                 read -p "Press Enter to continue..."
                 break
                 ;;
