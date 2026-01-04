@@ -421,14 +421,100 @@ while true; do
                 break
                 ;;
             5)
-                echo ""
+                 echo ""
                 echo "=== Select from Table ==="
-                # TODO: Implement select logic
                 # - Prompt for table name
+                read -p "Enter table name: " TABLE_NAME
+    		META_FILE="${DB_PATH}/${TABLE_NAME}.meta"
+    		DATA_FILE="${DB_PATH}/${TABLE_NAME}.data"
+    		
+    		if [[ ! -f "$META_FILE" || ! -f "$DATA_FILE" ]]; then
+        		echo "Error: Table does not exist."
+        		read -p "Press Enter..."
+       			break
+    		fi
+    		
+    		COL_NAMES=()
+    		COL_TYPES=()
+    		COL_PKS=()
+    		while IFS=: read -r NAME TYPE PK; do
+        		COL_NAMES+=("$NAME")
+        		COL_TYPES+=("$TYPE")
+        		COL_PKS+=("$PK")
+    		done < "$META_FILE"
                 # - Prompt for columns to select (* for all)
-                # - Prompt for WHERE conditions (optional)
-                # - Use awk to filter and format results
+                echo ""
+    		echo "Select Option:"
+    		echo "1) Select all columns"
+    		echo "2) Select specific columns"
+    		read -p "Enter your choice (1 or 2): " SEL_OPTION
+    		SELECT_INDICES=()
+    		if [[ "$SEL_OPTION" == "1" ]]; then
+        		for i in "${!COL_NAMES[@]}"; do
+            			SELECT_INDICES+=("$i")
+       			done
+       		elif [[ "$SEL_OPTION" == "2" ]]; then
+        		echo "Available columns:"
+        	for i in "${!COL_NAMES[@]}"; do
+        	echo "$((i+1))) ${COL_NAMES[$i]}"
+        	done
+        	read -p "Enter column numbers separated by space (e.g., 1 3): " COL_INPUT
+        	INVALID_COL_INPUT=0
+        		for i in "${!COL_NAMES[@]}"; do
+        		echo "$((i+1))) ${COL_NAMES[$i]}"
+        		done
+        		read -p "Enter column numbers separated by space (e.g., 1 3): " COL_INPUT
+        		for num in $COL_INPUT; do
+            		# User enters 1-based column numbers; convert to 0-based index for arrays
+            		if [[ "$num" =~ ^[0-9]+$ ]] && [[ "$num" -ge 1 && "$num" -le "${#COL_NAMES[@]}" ]]; then
+                		SELECT_INDICES+=($((num-1)))
+            		else
+                		echo "Invalid column number: $num"
+                		read -p "Press Enter..."
+                		break 2
+            		fi
+        		done
+        		else
+        		echo "Invalid option."
+        		read -p "Press Enter..."
+        		break
+        	fi
+                # Ensure at least one column was selected before displaying results
+                if [[ ${#SELECT_INDICES[@]} -eq 0 ]]; then
+                    echo "No valid columns selected."
+                    read -p "Press Enter to continue..."
+                    break
+                fi
                 # - Display results in formatted table
+                HEADER=""
+    		SEPARATOR=""
+    		for idx in "${SELECT_INDICES[@]}"; do
+        		HEADER+="| $(printf "%-15s" "${COL_NAMES[$idx]}") "
+        		SEPARATOR+="------------------"
+    		done
+    		HEADER+="|"
+    		SEPARATOR+="-"
+    		echo ""
+    		echo "$SEPARATOR"
+    		echo "$HEADER"
+    		echo "$SEPARATOR"
+    		
+    		if [[ ! -s "$DATA_FILE" ]]; then
+        		echo "| $(printf "%-15s" "No records found") |"
+    		else
+    		# - Use awk to filter and format results
+        		awk -F: -v cols="$(IFS=,; echo "${SELECT_INDICES[*]}")" '
+        		BEGIN { split(cols, arr, ",") }
+        		{
+            			printf "|"
+            			for (i=1; i<=length(arr); i++) {
+                			idx = arr[i]+1
+                			printf " %-15s |", $idx
+            			}
+            			print ""
+        		}' "$DATA_FILE"
+    		fi
+    		echo "$SEPARATOR"
                 read -p "Press Enter to continue..."
                 break
                 ;;
