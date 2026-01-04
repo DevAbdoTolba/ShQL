@@ -295,11 +295,42 @@ while true; do
             3)
                 echo ""
                 echo "=== Drop Table ==="
-                # TODO: Implement table deletion logic
-                # - Prompt for table name
-                # - Confirm deletion (Y/N)
-                # - Remove table metadata and data files
-                # - Display success message
+                read -p "Enter table name: " TABLE_NAME
+
+                # Validation
+                if [[ -z "$TABLE_NAME" ]]; then
+                    echo "Error: Table name cannot be empty."
+                    read -p "Press Enter..."
+                    break
+                fi
+                
+                META_FILE="${DB_PATH}/${TABLE_NAME}.meta"
+                DATA_FILE="${DB_PATH}/${TABLE_NAME}.data"
+                
+                # Check for path traversal/invalid paths using realpath
+                REAL_META_PATH=$(realpath -m "$META_FILE")
+                REAL_DB_PATH=$(realpath "$DB_PATH")
+                
+                if [[ "$REAL_META_PATH" != "$REAL_DB_PATH"/* ]]; then
+                     echo "Error: Invalid table name."
+                     read -p "Press Enter..."
+                     break
+                fi
+
+                if [[ ! -f "$META_FILE" ]]; then
+                    echo "Error: Table '$TABLE_NAME' does not exist."
+                    read -p "Press Enter..."
+                    break
+                fi
+
+                read -p "Are you sure you want to delete table '$TABLE_NAME'? (y/n): " CONFIRM
+                if [[ "$CONFIRM" == "y" || "$CONFIRM" == "Y" ]]; then
+                    rm -f "$META_FILE" "$DATA_FILE"
+                    echo "Table '$TABLE_NAME' dropped successfully."
+                else
+                    echo "Operation cancelled."
+                fi
+
                 read -p "Press Enter to continue..."
                 break
                 ;;
