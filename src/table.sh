@@ -183,9 +183,9 @@ while true; do
     			done
    			COL_NAMES="$COL_NAMES $LOWER_NAME"
     			# Column type
-    			read -p "  Type (int/string): " COL_TYPE
-    			if [[ "$COL_TYPE" != "int" && "$COL_TYPE" != "string" ]]; then
-        			echo "Error: Invalid data type. Must be 'int' or 'string'."
+    			read -p "  Type (int/string/date/binary): " COL_TYPE
+    			if [[ "$COL_TYPE" != "int" && "$COL_TYPE" != "string" && "$COL_TYPE" != "date" && "$COL_TYPE" != "binary" ]]; then
+        			echo "Error: Invalid data type. Must be 'int', 'string', 'date', or 'binary'."
        				 rm -f "$META_FILE"
        				 read -p "Press Enter..."
        				 break 2
@@ -359,6 +359,11 @@ while true; do
                 read -p "Are you sure you want to delete table '$TABLE_NAME'? (y/n): " CONFIRM
                 if [[ "$CONFIRM" == "y" || "$CONFIRM" == "Y" ]]; then
                     rm -f "$META_FILE" "$DATA_FILE"
+                    # Also remove binary storage directory if it exists
+                    BIN_DIR="${DB_PATH}/${TABLE_NAME}.bin"
+                    if [[ -d "$BIN_DIR" ]]; then
+                        rm -rf "$BIN_DIR"
+                    fi
                     echo "Table '$TABLE_NAME' dropped successfully."
                     # Update DBS metadata - decrement table count and update last_modified
                     awk -F',' -v db="$DB_NAME" -v ts="$(date +%s)" '
@@ -483,6 +488,39 @@ while true; do
                 				echo "Error: ':' is not allowed in string."
                 				continue
             				fi
+            		elif [[ "${COL_TYPES[$i]}" == "date" ]]; then
+            			PARSED_DATE=""
+            			if [[ "$VALUE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+                			PARSED_DATE="$VALUE"
+            			elif [[ "$VALUE" =~ ^[0-9]{4}-[0-9]{2}$ ]]; then
+                			PARSED_DATE="${VALUE}-01"
+            			elif [[ "$VALUE" =~ ^[0-9]{4}$ ]]; then
+                			PARSED_DATE="${VALUE}-01-01"
+            			elif [[ "$VALUE" =~ ^[0-9]+$ ]]; then
+                			PARSED_DATE=$(date -d "@$VALUE" +"%Y-%m-%d" 2>/dev/null)
+            			fi
+            			if [[ -z "$PARSED_DATE" ]]; then
+                			echo "you stupid :)"
+                			echo "Hint: Use format YYYY-MM-DD (e.g., 2024-12-25)"
+                			continue
+            			fi
+            			VALUE="$PARSED_DATE"
+            		elif [[ "${COL_TYPES[$i]}" == "binary" ]]; then
+            			if [[ ! -f "$VALUE" ]]; then
+                			echo "Error: File '$VALUE' does not exist."
+                			continue
+            			fi
+            			FILE_SIZE=$(stat -c%s "$VALUE" 2>/dev/null || stat -f%z "$VALUE" 2>/dev/null)
+            			if [[ "$FILE_SIZE" -gt 1048576 ]]; then
+                			echo "Error: File exceeds 1MB limit."
+                			continue
+            			fi
+            			BIN_DIR="${DB_PATH}/${TABLE_NAME}.bin"
+            			mkdir -p "$BIN_DIR"
+            			TIMESTAMP=$(date +%s%N)
+            			ARCHIVE_NAME="${TIMESTAMP}.tar.gz"
+            			tar -czf "${BIN_DIR}/${ARCHIVE_NAME}" -C "$(dirname "$VALUE")" "$(basename "$VALUE")"
+            			VALUE="$ARCHIVE_NAME"
        				fi
        		
        				break
@@ -708,7 +746,43 @@ while true; do
                           read -p "Press Enter..."
                           break
                       fi
-                 fi
+                 elif [[ "$TARGET_COL_TYPE" == "date" ]]; then
+                       PARSED_DATE=""
+                       if [[ "$NEW_VALUE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+                           PARSED_DATE="$NEW_VALUE"
+                       elif [[ "$NEW_VALUE" =~ ^[0-9]{4}-[0-9]{2}$ ]]; then
+                           PARSED_DATE="${NEW_VALUE}-01"
+                       elif [[ "$NEW_VALUE" =~ ^[0-9]{4}$ ]]; then
+                           PARSED_DATE="${NEW_VALUE}-01-01"
+                       elif [[ "$NEW_VALUE" =~ ^[0-9]+$ ]]; then
+                           PARSED_DATE=$(date -d "@$NEW_VALUE" +"%Y-%m-%d" 2>/dev/null)
+                       fi
+                       if [[ -z "$PARSED_DATE" ]]; then
+                           echo "you stupid :)"
+                           echo "Hint: Use format YYYY-MM-DD (e.g., 2024-12-25)"
+                           read -p "Press Enter..."
+                           break
+                       fi
+                       NEW_VALUE="$PARSED_DATE"
+                  elif [[ "$TARGET_COL_TYPE" == "binary" ]]; then
+                       if [[ ! -f "$NEW_VALUE" ]]; then
+                           echo "Error: File '$NEW_VALUE' does not exist."
+                           read -p "Press Enter..."
+                           break
+                       fi
+                       FILE_SIZE=$(stat -c%s "$NEW_VALUE" 2>/dev/null || stat -f%z "$NEW_VALUE" 2>/dev/null)
+                       if [[ "$FILE_SIZE" -gt 1048576 ]]; then
+                           echo "Error: File exceeds 1MB limit."
+                           read -p "Press Enter..."
+                           break
+                       fi
+                       BIN_DIR="${DB_PATH}/${TABLE_NAME}.bin"
+                       mkdir -p "$BIN_DIR"
+                       TIMESTAMP=$(date +%s%N)
+                       ARCHIVE_NAME="${TIMESTAMP}.tar.gz"
+                       tar -czf "${BIN_DIR}/${ARCHIVE_NAME}" -C "$(dirname "$NEW_VALUE")" "$(basename "$NEW_VALUE")"
+                       NEW_VALUE="$ARCHIVE_NAME"
+                  fi
                  
                  # If updating PK, check text uniqueness (omitted for strict simplicity unless requested, but good practice. User didn't ask for it specifically in 'update', but implied by constraints. Let's just do update.)
                  if [[ $((TARGET_IDX+1)) -eq $PK_INDEX ]]; then
