@@ -231,6 +231,13 @@ while true; do
             				break
         			fi
 
+        			if [[ "$PK_COL" -gt "$COL_COUNT" ]]; then
+            				echo "Error: Column number must be between 1 and $COL_COUNT."
+            				rm -f "$META_FILE"
+            				read -p "Press Enter..."
+            				break
+        			fi
+
         			COL_TYPE=$(awk -F: -v n="$PK_COL" 'NR==n {print $2}' "$META_FILE")
 
         			if [[ "$COL_TYPE" != "int" ]]; then
