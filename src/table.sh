@@ -276,10 +276,19 @@ while true; do
             2)
                 echo ""
                 echo "=== List Tables ==="
-                # TODO: Implement table listing logic
-                # - List all tables in current database
-                # - Display table metadata (columns, row count)
-                # - Format output as table
+                echo ""
+                echo "Tables List:"
+                # Check if any .meta files exist
+                if compgen -G "$DB_PATH/*.meta" > /dev/null; then
+                    i=1
+                    for meta_file in "$DB_PATH"/*.meta; do
+                        table_name=$(basename "$meta_file" .meta)
+                        echo "$i) $table_name"
+                        ((i++))
+                    done
+                else
+                    echo "No tables found."
+                fi
                 read -p "Press Enter to continue..."
                 break
                 ;;
