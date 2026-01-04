@@ -162,25 +162,29 @@ while true; do
     		
     		case "$confirm" in
         	   Y|y)
-            		if [[ -d "$DATA_DIR/$db_name" ]]; then
-                		rm -rf "$DATA_DIR/$db_name"
-                		echo "Database directory deleted."
-            		else
-                		echo "Warning: Database folder missing, metadata only."
-            		fi
-
+            		# Update metadata first before deleting directory
             		if [[ "$remove_all" -eq 1 ]]; then
                 		grep -v "^${db_name}," "$META_DIR/DBS" > "$META_DIR/DBS.tmp"
                 		mv "$META_DIR/DBS.tmp" "$META_DIR/DBS"
                 		echo "Metadata row removed completely."
             		else
-                		awk -F',' -v db="$db_name" '
+                		# Add deletion timestamp to database name
+                		deletion_timestamp=$(date +%s)
+                		awk -F',' -v db="$db_name" -v ts="$deletion_timestamp" '
                 		BEGIN{OFS=","}
-                		$1==db {$1="!"db}
+                		$1==db {$1=ts"!"db}
                 		{print}
                 		' "$META_DIR/DBS" > "$META_DIR/DBS.tmp"
                 		mv "$META_DIR/DBS.tmp" "$META_DIR/DBS"
-                		echo "Database marked as deleted in metadata."
+                		echo "Database marked as deleted in metadata with timestamp."
+            		fi
+
+            		# Delete directory after metadata update
+            		if [[ -d "$DATA_DIR/$db_name" ]]; then
+                		rm -rf "$DATA_DIR/$db_name"
+                		echo "Database directory deleted."
+            		else
+                		echo "Warning: Database folder missing, metadata only."
             		fi
             		;;
         	   *)
