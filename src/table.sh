@@ -278,20 +278,21 @@ while true; do
         	done
         	read -p "Enter column numbers separated by space (e.g., 1 3): " COL_INPUT
         	INVALID_COL_INPUT=0
-        	for num in $COL_INPUT; do
-            		if [[ "$num" =~ ^[1-9][0-9]*$ ]] && ((num >= 1 && num <= ${#COL_NAMES[@]})); then
+        		for i in "${!COL_NAMES[@]}"; do
+        		echo "$((i+1))) ${COL_NAMES[$i]}"
+        		done
+        		read -p "Enter column numbers separated by space (e.g., 1 3): " COL_INPUT
+        		for num in $COL_INPUT; do
+            		# User enters 1-based column numbers; convert to 0-based index for arrays
+            		if [[ "$num" =~ ^[0-9]+$ ]] && [[ "$num" -ge 1 && "$num" -le "${#COL_NAMES[@]}" ]]; then
                 		SELECT_INDICES+=($((num-1)))
             		else
                 		echo "Invalid column number: $num"
                 		read -p "Press Enter..."
-                		INVALID_COL_INPUT=1
-                		break
+                		break 2
             		fi
-        	done
-        	if [[ "$INVALID_COL_INPUT" -eq 1 ]]; then
-        		continue
-        	fi
-        	else
+        		done
+        		else
         		echo "Invalid option."
         		read -p "Press Enter..."
         		break
