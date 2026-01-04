@@ -561,9 +561,9 @@ while true; do
     		done < "$META_FILE"
                 # - Prompt for columns to select (* for all)
                 echo ""
-    		echo "Select Option:"
-    		echo "1) Select all columns"
-    		echo "2) Select specific columns"
+    		echo "=== Columns to Display ==="
+    		echo "1) Display all columns"
+    		echo "2) Choose specific columns to display"
     		read -p "Enter your choice (1 or 2): " SEL_OPTION
     		SELECT_INDICES=()
     		if [[ "$SEL_OPTION" == "1" ]]; then
@@ -577,10 +577,6 @@ while true; do
         	done
         	read -p "Enter column numbers separated by space (e.g., 1 3): " COL_INPUT
         	INVALID_COL_INPUT=0
-        		for i in "${!COL_NAMES[@]}"; do
-        		echo "$((i+1))) ${COL_NAMES[$i]}"
-        		done
-        		read -p "Enter column numbers separated by space (e.g., 1 3): " COL_INPUT
         		for num in $COL_INPUT; do
             		# User enters 1-based column numbers; convert to 0-based index for arrays
             		if [[ "$num" =~ ^[0-9]+$ ]] && [[ "$num" -ge 1 && "$num" -le "${#COL_NAMES[@]}" ]]; then
@@ -623,18 +619,20 @@ while true; do
     		FILTER_VAL=""
     		if [[ "$FILTER_OPTION" == "2" ]]; then
     		    echo ""
-    		    echo "Available columns to search:"
-    		    for i in "${!COL_NAMES[@]}"; do
-    		        echo "$((i+1))) ${COL_NAMES[$i]}"
+    		    echo "Filter by which displayed column?"
+    		    for i in "${!SELECT_INDICES[@]}"; do
+    		        idx="${SELECT_INDICES[$i]}"
+    		        echo "$((i+1))) ${COL_NAMES[$idx]}"
     		    done
-    		    read -p "Enter column number to search in: " SEARCH_COL
-    		    if [[ ! "$SEARCH_COL" =~ ^[1-9][0-9]*$ ]] || [[ "$SEARCH_COL" -gt "${#COL_NAMES[@]}" ]]; then
-    		        echo "Error: Invalid column number."
+    		    read -p "Enter choice: " SEARCH_CHOICE
+    		    if [[ ! "$SEARCH_CHOICE" =~ ^[1-9][0-9]*$ ]] || [[ "$SEARCH_CHOICE" -gt "${#SELECT_INDICES[@]}" ]]; then
+    		        echo "Error: Invalid choice."
     		        read -p "Press Enter..."
     		        break
     		    fi
-    		    FILTER_COL="$SEARCH_COL"
-    		    read -p "Enter value to search for: " FILTER_VAL
+    		    # Convert choice to actual column index (1-based for awk)
+    		    FILTER_COL=$((SELECT_INDICES[$((SEARCH_CHOICE-1))]+1))
+    		    read -p "Enter value to match: " FILTER_VAL
     		fi
     		
     		echo ""
