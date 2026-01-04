@@ -163,7 +163,7 @@ while true; do
     		case "$confirm" in
         	   Y|y)
             		if [[ -d "$DATA_DIR/$db_name" ]]; then
-                		rm -r "$DATA_DIR/$db_name"
+                		rm -rf "$DATA_DIR/$db_name"
                 		echo "Database directory deleted."
             		else
                 		echo "Warning: Database folder missing, metadata only."
