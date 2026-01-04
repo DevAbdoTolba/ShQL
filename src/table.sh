@@ -611,6 +611,32 @@ while true; do
     		done
     		HEADER+="|"
     		SEPARATOR+="-"
+    		
+    		# - Ask if user wants to filter/search
+    		echo ""
+    		echo "Filter Option:"
+    		echo "1) Show all records"
+    		echo "2) Search by value"
+    		read -p "Enter your choice (1 or 2): " FILTER_OPTION
+    		
+    		FILTER_COL=""
+    		FILTER_VAL=""
+    		if [[ "$FILTER_OPTION" == "2" ]]; then
+    		    echo ""
+    		    echo "Available columns to search:"
+    		    for i in "${!COL_NAMES[@]}"; do
+    		        echo "$((i+1))) ${COL_NAMES[$i]}"
+    		    done
+    		    read -p "Enter column number to search in: " SEARCH_COL
+    		    if [[ ! "$SEARCH_COL" =~ ^[1-9][0-9]*$ ]] || [[ "$SEARCH_COL" -gt "${#COL_NAMES[@]}" ]]; then
+    		        echo "Error: Invalid column number."
+    		        read -p "Press Enter..."
+    		        break
+    		    fi
+    		    FILTER_COL="$SEARCH_COL"
+    		    read -p "Enter value to search for: " FILTER_VAL
+    		fi
+    		
     		echo ""
     		echo "$SEPARATOR"
     		echo "$HEADER"
@@ -620,9 +646,13 @@ while true; do
         		echo "| $(printf "%-15s" "No records found") |"
     		else
     		# - Use awk to filter and format results
-        		awk -F: -v cols="$(IFS=,; echo "${SELECT_INDICES[*]}")" '
+        		awk -F: -v cols="$(IFS=,; echo "${SELECT_INDICES[*]}")" -v filter_col="$FILTER_COL" -v filter_val="$FILTER_VAL" '
         		BEGIN { split(cols, arr, ",") }
         		{
+            		    # Apply filter if set
+            		    if (filter_col != "" && filter_val != "") {
+            		        if ($filter_col != filter_val) next
+            		    }
             			printf "|"
             			for (i=1; i<=length(arr); i++) {
                 			idx = arr[i]+1
