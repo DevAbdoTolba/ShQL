@@ -134,11 +134,79 @@ while true; do
             4)
                 echo ""
                 echo "=== Drop Database ==="
-                # TODO: Implement database deletion logic
-                # - Prompt for database name
-                # - Confirm deletion (Y/N)
-                # - Remove database directory and all contents
-                # - Display success message
+                read -p "Enter database name (use -a to remove metadata row): " user_in
+                remove_all=0
+    		db_name="$user_in"
+    		if [[ "$user_in" == *"-a"* ]]; then
+        		remove_all=1
+        		db_name="${user_in//-a/}"
+        		db_name="${db_name// /}"
+    		fi
+    		# Validation
+    		if [[ -z "$db_name" ]]; then
+        		echo "Error: Database name can not be empty!"
+        		read -p "Press Enter to continue..."
+        		break
+    		elif [[ ! "$db_name" =~ ^[a-zA-Z]{3,55}$ ]]; then
+        		echo "Error: Name must be 3-55 English letters only (no numbers, spaces, or symbols)"
+        		read -p "Press Enter to continue..."
+        		break
+    		fi
+    		if ! cut -d',' -f1 "$META_DIR/DBS" | grep -xq "$db_name"; then
+        		echo "Database '$db_name' not found."
+        		read -p "Press Enter to continue..."
+        		break
+    		fi
+    		
+    		read -p "Are you sure you want to delete '$db_name'? (Y/N): " confirm
+    		
+    		case "$confirm" in
+        	   Y|y)
+            		# Backup metadata before modification for rollback protection
+            		cp "$META_DIR/DBS" "$META_DIR/DBS.backup"
+            		
+            		# Update metadata first before deleting directory
+            		if [[ "$remove_all" -eq 1 ]]; then
+                		grep -v "^${db_name}," "$META_DIR/DBS" > "$META_DIR/DBS.tmp"
+                		mv "$META_DIR/DBS.tmp" "$META_DIR/DBS"
+                		echo "Metadata row removed completely."
+            		else
+                		# Add deletion timestamp to database name
+                		deletion_timestamp=$(date +%s)
+                		awk -F',' -v db="$db_name" -v ts="$deletion_timestamp" '
+                		BEGIN{OFS=","}
+                		$1==db {$1=ts"!"db}
+                		{print}
+                		' "$META_DIR/DBS" > "$META_DIR/DBS.tmp"
+                		mv "$META_DIR/DBS.tmp" "$META_DIR/DBS"
+                		echo "Database marked as deleted in metadata with timestamp $deletion_timestamp."
+            		fi
+
+            		# Delete directory after metadata update
+            		if [[ -d "$DATA_DIR/$db_name" ]]; then
+                		if rm -rf "$DATA_DIR/$db_name"; then
+                    			echo "Database directory deleted."
+                    			# Success - remove backup
+                    			if ! rm -f "$META_DIR/DBS.backup"; then
+                        			echo "Warning: Could not remove backup file."
+                    			fi
+                		else
+                    			echo "ERROR: Failed to delete database directory!"
+                    			# Restore metadata from backup
+                    			mv "$META_DIR/DBS.backup" "$META_DIR/DBS"
+                    			echo "Metadata restored - operation rolled back."
+                		fi
+            		else
+                		echo "Warning: Database folder missing, restoring metadata..."
+                		# Restore metadata from backup since directory doesn't exist
+                		mv "$META_DIR/DBS.backup" "$META_DIR/DBS"
+                		echo "Operation canceled - metadata restored."
+            		fi
+            		;;
+        	   *)
+            		echo "Deletion canceled."
+            		;;
+    		esac
                 read -p "Press Enter to continue..."
                 break
                 ;;
