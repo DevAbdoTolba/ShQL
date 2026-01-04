@@ -80,10 +80,12 @@ while true; do
             2)
                 echo ""
                 echo "=== List Databases ==="
-                # TODO: Implement database listing logic
-                # - List all directories in $DATA_DIR
-                # - Display in formatted table
-                # - Show database metadata (creation date, table count, etc.)
+                if [[ -s "$META_DIR/DBS" ]]; then
+                    echo "Databases List:"
+                    awk -F',' '$1 !~ /!/ { print NR ") " $1 }' "$META_DIR/DBS"
+                else
+                    echo "No databases found."
+                fi
                 read -p "Press Enter to continue..."
                 break
                 ;;
