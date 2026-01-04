@@ -189,35 +189,79 @@ while true; do
        				 break 2
    			 fi
    			  # Primary Key
-   			 read -p "  Primary Key? (y/n): " IS_PK
-   			 if [[ "$IS_PK" == "y" ]]; then
-       				 if [[ $PK_COUNT -eq 1 ]]; then
-          			    echo "Error: Only one primary key allowed."
-          			    rm -f "$META_FILE"
-          			    read -p "Press Enter..."
-         			    break 2
-       				 fi
+   			 if [[ $PK_COUNT -eq 0 ]]; then
+    				read -p "  Primary Key? (y/n): " IS_PK
+			else
+    				IS_PK="n"
+			fi
 
-        			 if [[ "$COL_TYPE" != "int" ]]; then
-           		 	    echo "Error: Primary key must be integer."
-           			     rm -f "$META_FILE"
-           			     read -p "Press Enter..."
-           		 	     break 2
-        			 fi
+			if [[ "$IS_PK" == "y" ]]; then
+    				if [[ "$COL_TYPE" != "int" ]]; then
+        			echo "Error: Primary key must be integer."
+        			rm -f "$META_FILE"
+        			read -p "Press Enter..."
+        			break 2
+    			fi
 
-        			echo "${COL_NAME}:${COL_TYPE}:PK" >> "$META_FILE"
-        			PK_COUNT=1
-    			else
-      				echo "${COL_NAME}:${COL_TYPE}" >> "$META_FILE"
-  			fi
+    			echo "${COL_NAME}:${COL_TYPE}:PK" >> "$META_FILE"
+    			PK_COUNT=1
+			else
+    				echo "${COL_NAME}:${COL_TYPE}" >> "$META_FILE"
+			fi
   		done
-  		# Final PK Validation
-  		if [[ $PK_COUNT -ne 1 ]]; then
-    			echo "Error: Table must have exactly one primary key."
-    			rm -f "$META_FILE"
-    			read -p "Press Enter..."
-    			break
+  		# Recovery if no primary key selected
+		if [[ $PK_COUNT -eq 0 ]]; then
+    			echo ""
+    			echo "No Primary Key selected."
+    			echo "1) Choose Primary Key from existing columns"
+    			echo "2) Cancel table creation"
+    			read -p "Enter choice: " PK_OPTION
+
+    			if [[ "$PK_OPTION" == "1" ]]; then
+        			echo ""
+        			echo "Available columns:"
+        			awk -F: '{print NR ") " $1 " (" $2 ")"}' "$META_FILE"
+
+        			read -p "Enter column number: " PK_COL
+
+        			if ! [[ "$PK_COL" =~ ^[1-9][0-9]*$ ]]; then
+            				echo "Invalid choice."
+            				rm -f "$META_FILE"
+            				read -p "Press Enter..."
+            				break
+        			fi
+
+        			if [[ "$PK_COL" -gt "$COL_COUNT" ]]; then
+            				echo "Error: Column number must be between 1 and $COL_COUNT."
+            				rm -f "$META_FILE"
+            				read -p "Press Enter..."
+            				break
+        			fi
+
+        			COL_TYPE=$(awk -F: -v n="$PK_COL" 'NR==n {print $2}' "$META_FILE")
+
+        			if [[ "$COL_TYPE" != "int" ]]; then
+            				echo "Error: Primary key must be integer."
+            				rm -f "$META_FILE"
+            				read -p "Press Enter..."
+            				break
+        			fi
+
+        			awk -v n="$PK_COL" 'BEGIN { FS = OFS = ":" } NR==n { $3 = "PK" } { print }' \
+        			"$META_FILE" > "${META_FILE}.tmp" && mv "${META_FILE}.tmp" "$META_FILE"
+    			elif [[ "$PK_OPTION" == "2" ]]; then
+        			echo "Table creation cancelled."
+       			 	rm -f "$META_FILE"
+        			read -p "Press Enter..."
+        			break
+    			else
+        			echo "Invalid choice."
+       			 	rm -f "$META_FILE"
+        			read -p "Press Enter..."
+        			break
+    			fi
 		fi
+
 		if ! touch "$DATA_FILE"; then
     			echo "Error: Failed to create data file for table '$TABLE_NAME'."
     			rm -f "$META_FILE"
