@@ -176,7 +176,7 @@ while true; do
                 		{print}
                 		' "$META_DIR/DBS" > "$META_DIR/DBS.tmp"
                 		mv "$META_DIR/DBS.tmp" "$META_DIR/DBS"
-                		echo "Database marked as deleted in metadata with timestamp."
+                		echo "Database marked as deleted in metadata with timestamp $deletion_timestamp."
             		fi
 
             		# Delete directory after metadata update
