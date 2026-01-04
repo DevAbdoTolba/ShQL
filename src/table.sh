@@ -242,8 +242,13 @@ while true; do
 
         			awk -v n="$PK_COL" 'BEGIN { FS = OFS = ":" } NR==n { $3 = "PK" } { print }' \
         			"$META_FILE" > "${META_FILE}.tmp" && mv "${META_FILE}.tmp" "$META_FILE"
-    			else
+    			elif [[ "$PK_OPTION" == "2" ]]; then
         			echo "Table creation cancelled."
+       			 	rm -f "$META_FILE"
+        			read -p "Press Enter..."
+        			break
+    			else
+        			echo "Invalid choice."
        			 	rm -f "$META_FILE"
         			read -p "Press Enter..."
         			break
