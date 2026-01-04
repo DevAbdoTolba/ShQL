@@ -38,6 +38,7 @@ fi
 
 DB_NAME="$1"
 DB_PATH="${DATA_DIR}/${DB_NAME}"
+META_DIR="${DATA_DIR}/meta"
 
 # Validate database exists
 if [[ ! -d "$DB_PATH" ]]; then
@@ -269,6 +270,12 @@ while true; do
     			break
 		fi
 		echo "Table '$TABLE_NAME' created successfully."
+		# Update DBS metadata - increment table count and update last_modified
+		awk -F',' -v db="$DB_NAME" -v ts="$(date +%s)" '
+		BEGIN{OFS=","}
+		$1==db {$2=$2+1; $4=ts}
+		{print}
+		' "$META_DIR/DBS" > "$META_DIR/DBS.tmp" && mv "$META_DIR/DBS.tmp" "$META_DIR/DBS"
                 
                 read -p "Press Enter to continue..."
                 break
@@ -327,6 +334,12 @@ while true; do
                 if [[ "$CONFIRM" == "y" || "$CONFIRM" == "Y" ]]; then
                     rm -f "$META_FILE" "$DATA_FILE"
                     echo "Table '$TABLE_NAME' dropped successfully."
+                    # Update DBS metadata - decrement table count and update last_modified
+                    awk -F',' -v db="$DB_NAME" -v ts="$(date +%s)" '
+                    BEGIN{OFS=","}
+                    $1==db {$2=($2>0?$2-1:0); $4=ts}
+                    {print}
+                    ' "$META_DIR/DBS" > "$META_DIR/DBS.tmp" && mv "$META_DIR/DBS.tmp" "$META_DIR/DBS"
                 else
                     echo "Operation cancelled."
                 fi
