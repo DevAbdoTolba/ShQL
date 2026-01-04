@@ -240,7 +240,7 @@ while true; do
             				break
         			fi
 
-        			awk -F: -v n="$PK_COL" 'NR==n {$0=$1":"$2":PK"} {print}' \
+        			awk -v n="$PK_COL" 'BEGIN { FS = OFS = ":" } NR==n { $3 = "PK" } { print }' \
         			"$META_FILE" > "${META_FILE}.tmp" && mv "${META_FILE}.tmp" "$META_FILE"
     			else
         			echo "Table creation cancelled."
