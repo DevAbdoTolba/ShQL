@@ -162,6 +162,9 @@ while true; do
     		
     		case "$confirm" in
         	   Y|y)
+            		# Backup metadata before modification for rollback protection
+            		cp "$META_DIR/DBS" "$META_DIR/DBS.backup"
+            		
             		# Update metadata first before deleting directory
             		if [[ "$remove_all" -eq 1 ]]; then
                 		grep -v "^${db_name}," "$META_DIR/DBS" > "$META_DIR/DBS.tmp"
@@ -181,10 +184,21 @@ while true; do
 
             		# Delete directory after metadata update
             		if [[ -d "$DATA_DIR/$db_name" ]]; then
-                		rm -rf "$DATA_DIR/$db_name"
-                		echo "Database directory deleted."
+                		if rm -rf "$DATA_DIR/$db_name" 2>/dev/null; then
+                    			echo "Database directory deleted."
+                    			# Success - remove backup
+                    			rm -f "$META_DIR/DBS.backup"
+                		else
+                    			echo "ERROR: Failed to delete database directory!"
+                    			# Restore metadata from backup
+                    			mv "$META_DIR/DBS.backup" "$META_DIR/DBS"
+                    			echo "Metadata restored - operation rolled back."
+                		fi
             		else
-                		echo "Warning: Database folder missing, metadata only."
+                		echo "Warning: Database folder missing, restoring metadata..."
+                		# Restore metadata from backup since directory doesn't exist
+                		mv "$META_DIR/DBS.backup" "$META_DIR/DBS"
+                		echo "Operation canceled - metadata restored."
             		fi
             		;;
         	   *)
