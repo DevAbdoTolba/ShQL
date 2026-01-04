@@ -292,7 +292,7 @@ while true; do
                     for meta_file in "$DB_PATH"/*.meta; do
                         table_name=$(basename "$meta_file" .meta)
                         echo "$i) $table_name"
-                        ((i++))
+                        ((i+=1))
                     done
                 else
                     echo "No tables found."
@@ -431,7 +431,7 @@ while true; do
         		break
    		 fi
                 # - Display column names
-                COL_NAMES=()
+        COL_NAMES=()
 		COL_TYPES=()
 		COL_PKS=()
 		while IFS=: read -r NAME TYPE PK; do
@@ -440,7 +440,7 @@ while true; do
     			COL_PKS+=("$PK")
 		done < "$META_FILE"
                 
-                echo ""
+            echo ""
     		echo "Table Columns:"
     		for i in "${!COL_NAMES[@]}"; do
     			if [[ "${COL_PKS[$i]}" == "PK" ]]; then
