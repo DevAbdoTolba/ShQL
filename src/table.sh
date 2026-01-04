@@ -231,9 +231,8 @@ while true; do
             				break
         			fi
 
-        			NUM_COLUMNS=$(wc -l < "$META_FILE")
-        			if [[ "$PK_COL" -gt "$NUM_COLUMNS" ]]; then
-            				echo "Error: Column number must be between 1 and $NUM_COLUMNS."
+        			if [[ "$PK_COL" -gt "$COL_COUNT" ]]; then
+            				echo "Error: Column number must be between 1 and $COL_COUNT."
             				rm -f "$META_FILE"
             				read -p "Press Enter..."
             				break
