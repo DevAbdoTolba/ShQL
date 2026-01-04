@@ -36,10 +36,13 @@ setup:
 	@echo "Setting up ShQL..."
 	@echo "Creating directories..."
 	@mkdir -p $(DATA_DIR)
+	@mkdir -p $(DATA_DIR)/snapshots/db
+	@mkdir -p $(DATA_DIR)/snapshots/table
 	@mkdir -p $(DOCS_DIR)
 	@echo "Setting executable permissions on scripts..."
 	@chmod +x $(DB_SCRIPT)
 	@chmod +x $(TABLE_SCRIPT)
+	@chmod +x $(SRC_DIR)/recovery.sh
 	@echo "Setup complete!"
 	@echo ""
 	@echo "You can now run './src/db.sh' to start ShQL"
