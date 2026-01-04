@@ -71,7 +71,7 @@ while true; do
                     else
                         echo "Creating Database: ${db_name}"
                         mkdir $DATA_DIR/$db_name
-                        echo "${db_name},0," >> "$META_DIR/DBS"
+                        echo "${db_name},0,$(date +%s),$(date +%s)" >> "$META_DIR/DBS"
                     fi
                 fi
                 read -p "Press Enter to continue..."
