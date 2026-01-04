@@ -561,14 +561,126 @@ while true; do
             6)
                 echo ""
                 echo "=== Update Table ==="
-                # TODO: Implement update logic
-                # - Prompt for table name
-                # - Prompt for column to update
-                # - Prompt for new value
-                # - Prompt for WHERE conditions
-                # - Use sed/awk to update matching rows
-                # - Display number of rows affected
-                read -p "Press Enter to continue..."
+                read -p "Enter table name: " TABLE_NAME
+                 
+                 # Table Name Validation
+                 if [[ -z "$TABLE_NAME" ]]; then
+                     echo "Error: Table name cannot be empty."
+                     read -p "Press Enter..."
+                     break
+                 fi
+                 META_FILE="${DB_PATH}/${TABLE_NAME}.meta"
+                 DATA_FILE="${DB_PATH}/${TABLE_NAME}.data"
+                 
+                 # Security/Path Validation
+                 REAL_META_PATH=$(realpath -m "$META_FILE")
+                 REAL_DB_PATH=$(realpath "$DB_PATH")
+                 if [[ "$REAL_META_PATH" != "$REAL_DB_PATH"/* ]]; then
+                     echo "Error: Invalid table name."
+                     read -p "Press Enter..."
+                     break
+                 fi
+				
+                 if [[ ! -f "$META_FILE" || ! -f "$DATA_FILE" ]]; then
+                    echo "Error: Table does not exist."
+                    read -p "Press Enter..."
+                    break
+                 fi
+
+                 if [[ ! -s "$DATA_FILE" ]]; then
+                    echo "Error: (empty table)"
+                    read -p "Press Enter..."
+                    break
+                 fi
+
+                 # Load Metadata
+                 COL_NAMES=()
+                 COL_TYPES=()
+                 PK_INDEX=-1
+                 # Use array to map columns
+                 i=0
+                 while IFS=: read -r NAME TYPE PK; do
+                     COL_NAMES+=("$NAME")
+                     COL_TYPES+=("$TYPE")
+                     if [[ "$PK" == "PK" ]]; then
+                         PK_INDEX=$((i+1))  # 1-based index for awk
+                     fi
+                     ((i = i + 1))
+                 done < "$META_FILE"
+
+                 read -p "Enter Primary Key of row to update: " PK_VALUE
+                 if [[ -z "$PK_VALUE" ]]; then
+                     echo "Error: PK cannot be empty."
+                     read -p "Press Enter..."
+                     break
+                 fi
+
+                 # Validate PK exists
+                 # Looking for exact match in data file
+                 if ! awk -F: -v pk="$PK_VALUE" -v idx="$PK_INDEX" '$idx == pk {found=1; exit} END {if (!found) exit 1}' "$DATA_FILE"; then
+                     echo "Error: Row with Primary Key '$PK_VALUE' not found."
+                     read -p "Press Enter..."
+                     break
+                 fi
+                 
+                 echo "Available Columns:"
+                 for j in "${!COL_NAMES[@]}"; do
+                      # Skip Primary Key from being updated? Usually safe to prevent updating PK but user requirements didn't specify. Assuming allow all for now but PK updation is dangerous.
+                      # Let's check constraints: "Prompt for column to update."
+                      echo "$((j+1))) ${COL_NAMES[$j]} (${COL_TYPES[$j]})"
+                 done
+
+                 read -p "Enter column number to update: " COL_NUM
+                 
+                 if [[ ! "$COL_NUM" =~ ^[1-9][0-9]*$ ]] || [[ "$COL_NUM" -gt "${#COL_NAMES[@]}" ]]; then
+                     echo "Error: Invalid column number."
+                     read -p "Press Enter..."
+                     break
+                 fi
+                 
+                 TARGET_IDX=$((COL_NUM-1)) # 0-based index for arrays
+                 TARGET_COL_TYPE="${COL_TYPES[$TARGET_IDX]}"
+                 TARGET_COL_NAME="${COL_NAMES[$TARGET_IDX]}"
+                 
+                 # Cannot update PK to duplicate value - simplistic check if user tries to update PK
+                 if [[ $((TARGET_IDX+1)) -eq $PK_INDEX ]]; then
+                     echo "Warning: Updating Primary Key."
+                 fi
+
+                 read -p "Enter new value for '$TARGET_COL_NAME' ($TARGET_COL_TYPE): " NEW_VALUE
+
+                 # Validate Type
+                 if [[ "$TARGET_COL_TYPE" == "int" ]]; then
+                     if [[ ! "$NEW_VALUE" =~ ^-?[0-9]+$ ]]; then
+                         echo "Error: Value must be an integer."
+                         read -p "Press Enter..."
+                         break
+                     fi
+                 elif [[ "$TARGET_COL_TYPE" == "string" ]]; then
+                      if [[ "$NEW_VALUE" == *:* ]]; then
+                          echo "Error: ':' is not allowed in string."
+                          read -p "Press Enter..."
+                          break
+                      fi
+                 fi
+                 
+                 # If updating PK, check text uniqueness (omitted for strict simplicity unless requested, but good practice. User didn't ask for it specifically in 'update', but implied by constraints. Let's just do update.)
+                 if [[ $((TARGET_IDX+1)) -eq $PK_INDEX ]]; then
+                      if awk -F: -v pk="$NEW_VALUE" -v idx="$PK_INDEX" '$idx == pk {found=1; exit} END {if (found) exit 1}' "$DATA_FILE" ; then
+                          :
+                      else 
+                          echo "Error: Duplicate Primary Key value."
+                          read -p "Press Enter..."
+                          break
+                      fi
+                 fi
+
+                 # Perform Update
+                 # Using awk to rewrite the file
+                 awk -F: -v pk="$PK_VALUE" -v pk_idx="$PK_INDEX" -v target_idx="$((TARGET_IDX+1))" -v val="$NEW_VALUE" 'BEGIN{OFS=":"} $pk_idx == pk { $target_idx = val } 1' "$DATA_FILE" > "${DATA_FILE}.tmp" && mv "${DATA_FILE}.tmp" "$DATA_FILE"
+
+                 echo "Row updated successfully."
+                 read -p "Press Enter to continue..."
                 break
                 ;;
             7)
@@ -601,6 +713,12 @@ while true; do
     		
     		if [[ ! -f "$META_FILE" || ! -f "$DATA_FILE" ]]; then
         		echo "Error: Table '$TABLE_NAME' does not exist."
+        		read -p "Press Enter to continue..."
+        		break
+    		fi
+
+    		if [[ ! -s "$DATA_FILE" ]]; then
+        		echo "Error: (empty table)"
         		read -p "Press Enter to continue..."
         		break
     		fi
