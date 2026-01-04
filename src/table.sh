@@ -297,6 +297,12 @@ while true; do
         		read -p "Press Enter..."
         		break
         	fi
+                # Ensure at least one column was selected before displaying results
+                if [[ ${#SELECT_INDICES[@]} -eq 0 ]]; then
+                    echo "No valid columns selected."
+                    read -p "Press Enter to continue..."
+                    break
+                fi
                 # - Display results in formatted table
                 HEADER=""
     		SEPARATOR=""
