@@ -184,10 +184,12 @@ while true; do
 
             		# Delete directory after metadata update
             		if [[ -d "$DATA_DIR/$db_name" ]]; then
-                		if rm -rf "$DATA_DIR/$db_name" 2>/dev/null; then
+                		if rm -rf "$DATA_DIR/$db_name"; then
                     			echo "Database directory deleted."
                     			# Success - remove backup
-                    			rm -f "$META_DIR/DBS.backup"
+                    			if ! rm -f "$META_DIR/DBS.backup"; then
+                        			echo "Warning: Could not remove backup file."
+                    			fi
                 		else
                     			echo "ERROR: Failed to delete database directory!"
                     			# Restore metadata from backup
