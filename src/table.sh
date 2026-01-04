@@ -66,6 +66,7 @@ while true; do
         "Select from Table" \
         "Update Table" \
         "Delete from Table" \
+        "Recovery" \
         "Back to Main Menu"; do
         
         case $REPLY in
@@ -302,6 +303,31 @@ while true; do
             3)
                 echo ""
                 echo "=== Drop Table ==="
+                echo ""
+                echo "💡 Recovery Tip: Consider creating a snapshot before dropping."
+                echo "   This lets you undo this action if needed."
+                echo ""
+                echo "   [y] Yes, create snapshot first"
+                echo "   [n] No, proceed with drop"
+                echo "   [c] Cancel operation"
+                echo ""
+                read -p "Your choice: " DROP_CHOICE
+                
+                if [[ "$DROP_CHOICE" == "c" || "$DROP_CHOICE" == "C" ]]; then
+                    echo "Operation cancelled."
+                    read -p "Press Enter..."
+                    break
+                fi
+                
+                if [[ "$DROP_CHOICE" == "y" || "$DROP_CHOICE" == "Y" ]]; then
+                    echo ""
+                    echo "Launching Recovery to create snapshot..."
+                    read -p "Press Enter to continue to Recovery..."
+                    "$SCRIPT_DIR/recovery.sh" "$DB_NAME"
+                    echo ""
+                    echo "Returning to Drop Table..."
+                fi
+                
                 read -p "Enter table name: " TABLE_NAME
 
                 # Validation
@@ -699,6 +725,10 @@ while true; do
             7)
             	echo ""
     		echo "=== Delete from Table ==="
+    		echo ""
+    		echo "💡 Tip: You can create a snapshot to undo deletions if needed."
+    		echo "       Use Recovery → Create Table Snapshot before deleting."
+    		echo ""
     		# Delete a row by primary key from the specified table
     		read -p "Enter table name: " TABLE_NAME
     		
@@ -756,13 +786,20 @@ while true; do
                 break
                 ;;
             8)
+                # Recovery
+                echo ""
+                echo "Launching Recovery System..."
+                "$SCRIPT_DIR/recovery.sh" "$DB_NAME"
+                break
+                ;;
+            9)
                 echo ""
                 echo "Returning to main menu..."
                 break 2
                 ;;
             *)
                 echo ""
-                echo "Invalid option. Please select 1-8."
+                echo "Invalid option. Please select 1-9."
                 read -p "Press Enter to continue..."
                 break
                 ;;

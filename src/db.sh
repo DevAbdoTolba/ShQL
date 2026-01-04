@@ -136,6 +136,10 @@ while true; do
             4)
                 echo ""
                 echo "=== Drop Database ==="
+                echo ""
+                echo "💡 Recovery Tip: Before dropping, consider creating a snapshot."
+                echo "   Connect to the database first, then use Recovery → Create Database Snapshot."
+                echo ""
                 read -p "Enter database name (use -a to remove metadata row): " user_in
                 remove_all=0
     		db_name="$user_in"
